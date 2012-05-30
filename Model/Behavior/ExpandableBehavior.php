@@ -24,7 +24,12 @@ class ExpandableBehavior extends ModelBehavior {
 			}
 			foreach ($results as $i => $item) {
 				foreach ($item[$with] as $field) {
-					$results[$i][$model->alias][$field['key']] = $field['value'];
+					$value = $field['value'];
+					$valueArray = @unserialize($field['value']);
+					if ($valueArray !== false) {
+						$value = $valueArray;
+					}
+					$results[$i][$model->alias][$field['key']] = $value;
 				}
 			}
 		}
@@ -35,6 +40,11 @@ class ExpandableBehavior extends ModelBehavior {
 
 		$settings = $this->settings[$model->alias];
 		$this->_fieldsToSave = array_diff_key($model->data[$model->alias], $settings['schema']);
+		foreach ($this->_fieldsToSave as $key => $value) {
+			if (is_array($value)) {
+				$this->_fieldsToSave[$key] = serialize($value);
+			}
+		}
 		return true;
 		
 	}
