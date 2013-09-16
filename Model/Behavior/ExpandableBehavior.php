@@ -14,7 +14,7 @@ class ExpandableBehavior extends ModelBehavior {
 		}
 	}
 	
-	public function afterFind(Model $model, $results, $primary) {
+	public function afterFind(Model $model, $results, $primary = false) {
 
 		$settings = $this->settings[$model->alias];
 		if (!empty($settings['with'])) {
@@ -36,7 +36,7 @@ class ExpandableBehavior extends ModelBehavior {
 		return $results;
 	}
 	
-	public function beforeSave(Model $model) {
+	public function beforeSave(Model $model, $options = array()) {
 
 		$settings = $this->settings[$model->alias];
 		$this->_fieldsToSave = array_diff_key($model->data[$model->alias], $settings['schema']);
@@ -49,7 +49,7 @@ class ExpandableBehavior extends ModelBehavior {
 		
 	}
 	
-	public function afterSave(Model $model, $created) {
+	public function afterSave(Model $model, $created, $options = array()) {
 
 		$settings = $this->settings[$model->alias];
 		if (!empty($settings['with']) && !empty($this->_fieldsToSave)) {
