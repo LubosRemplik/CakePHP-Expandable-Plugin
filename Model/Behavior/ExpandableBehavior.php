@@ -88,8 +88,8 @@ class ExpandableBehavior extends ModelBehavior {
 	 * @param boolean $primary
 	 * @return mixed $results
 	 */
-	public function afterFind(Model $Model, $results, $primary) {
-		$settings = $this->settings[$Model->alias];
+	public function afterFind(Model $Model, $results, $primary = false) {
+		$settings = (!empty($this->settings[$Model->alias]) ? $this->settings[$Model->alias] : array());
 		if (!empty($settings['with'])) {
 			$with = $settings['with'];
 			if (!Set::matches('/' . $with, $results)) {
@@ -113,7 +113,7 @@ class ExpandableBehavior extends ModelBehavior {
 	 * @param object Model $Model
 	 * @return boolean
 	 */
-	public function beforeSave(Model $Model) {
+	public function beforeSave(Model $Model, $options = array()) {
 		$settings = $this->settings[$Model->alias];
 		$this->_fieldsToSave = array_diff_key($Model->data[$Model->alias], $settings['schema']);
 		return true;
@@ -127,7 +127,7 @@ class ExpandableBehavior extends ModelBehavior {
 	 * @param boolean $created
 	 * @return boolean
 	 */
-	public function afterSave(Model $Model, $created) {
+	public function afterSave(Model $Model, $created, $options = array()) {
 		$settings = $this->settings[$Model->alias];
 		if (!empty($settings['with']) && !empty($this->_fieldsToSave)) {
 			$with = $settings['with'];
