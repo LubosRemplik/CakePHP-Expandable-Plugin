@@ -114,8 +114,10 @@ class ExpandableBehavior extends ModelBehavior {
 	 * @return boolean
 	 */
 	public function beforeSave(Model $Model, $options = array()) {
-		$settings = $this->settings[$Model->alias];
-		$this->_fieldsToSave = array_diff_key($Model->data[$Model->alias], $settings['schema']);
+		$settings = (!empty($this->settings[$Model->alias]) ? $this->settings[$Model->alias] : array());
+		if (isset($settings['schema'])) {
+			$this->_fieldsToSave = array_diff_key($Model->data[$Model->alias], $settings['schema']);
+		}
 		return true;
 	}
 
@@ -128,7 +130,7 @@ class ExpandableBehavior extends ModelBehavior {
 	 * @return boolean
 	 */
 	public function afterSave(Model $Model, $created, $options = array()) {
-		$settings = $this->settings[$Model->alias];
+		$settings = (!empty($this->settings[$Model->alias]) ? $this->settings[$Model->alias] : array());
 		if (!empty($settings['with']) && !empty($this->_fieldsToSave)) {
 			$with = $settings['with'];
 			$assoc = $Model->hasMany[$with];
