@@ -64,7 +64,7 @@ class ExpandableBehavior extends ModelBehavior {
 		'encode_json' => true,
 		// Ignore all of these fields (never save them) security like whoa!
 		'restricted_keys' => array(),
-		// CSV strings are awesome -- they let us look INSET() in mysql
+		// CSV strings are awesome -- they let us look FIND_IN_SET() in mysql
 		//   if you don't need that, no need for CSV, Expandable will auto-encode/decode JSON
 		//   NOTE: don't send indexed arrays, as the keys will be lost
 		'encode_csv' => array(),
@@ -224,7 +224,7 @@ class ExpandableBehavior extends ModelBehavior {
 
 	/**
 	 * Encode fields which may be passed in as an array, as a CSV string
-	 * (for use with INSET() searching in MySQL)
+	 * (for use with FIND_IN_SET() searching in MySQL)
 	 *
 	 * @param Model $Model
 	 * @param mixed $value
