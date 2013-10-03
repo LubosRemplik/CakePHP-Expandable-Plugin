@@ -152,8 +152,15 @@ class ExpandableBehavior extends ModelBehavior {
 			$assoc = $Model->hasMany[$with];
 			$foreignKey = $assoc['foreignKey'];
 			$id = $Model->id;
+			// set of "keys" we will ignore
+			$restricted_keys = $settings['restricted_keys'];
+			// automatically ignore all associated models
+			$restricted_keys = array_merge($restricted_keys, array_keys($Model->belongsTo));
+			$restricted_keys = array_merge($restricted_keys, array_keys($Model->hasOne));
+			$restricted_keys = array_merge($restricted_keys, array_keys($Model->hasMany));
+			$restricted_keys = array_merge($restricted_keys, array_keys($Model->hasAndBelongsToMany));
 			foreach ($this->_fieldsToSave as $key => $val) {
-				if (in_array($key, $settings['restricted_keys'], true)) {
+				if (in_array($key, $restricted_keys, true)) {
 					continue;
 				}
 				$fieldId = $Model->{$with}->field('id', array(
