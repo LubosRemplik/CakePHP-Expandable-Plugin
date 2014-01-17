@@ -59,20 +59,53 @@ class User extends AppModel {
  */
 class ExpandableBehavior extends ModelBehavior {
 
+	public $defaults = array(
+		// if a value is an array or object we can encode/decode via: json
+		'encode_json' => true,
+		// Ignore all of these fields (never save them) security like whoa!
+		'restricted_keys' => array(),
+		// CSV strings are awesome -- they let us look FIND_IN_SET() in mysql
+		//   if you don't need that, no need for CSV, Expandable will auto-encode/decode JSON
+		//   NOTE: don't send indexed arrays, as the keys will be lost
+		'encode_csv' => array(),
+		// Date inputs from CakePHP can come in as arrays, this is the handler:
+		//   'birthdate' => 'Y-m-d',
+		//   'card_expires' => 'm/y',
+		'encode_date' => array(),
+   	);
+
 	public $settings = array();
 
 	private $_fieldsToSave = array();
 
-	public function setup(&$model, $settings = array()) {
+	/**
+	 * Setup the model
+	 *
+	 * @param object Model $Model
+	 * @param array $settings
+	 * @return boolean
+	 */
+	public function setup(Model $Model, $settings = array()) {
 		if (isset($settings['with'])) {
-			$base = array('schema' => $model->schema());
+			$base = array('schema' => $Model->schema());
 			$settings = array_merge($settings, $base);
-			return $this->settings[$model->alias] = $settings;
+			$settings = array_merge($this->defaults, $settings);
+			$settings = Set::normalize($settings);
+			return $this->settings[$Model->alias] = $settings;
 		}
 	}
 
-	public function afterFind(&$model, $results, $primary) {
-		$settings = $this->settings[$model->alias];
+	/**
+	 * Standard afterFind() callback
+	 * Inject the expandable data (as fields)
+	 *
+	 * @param object Model $Model
+	 * @param mixed $results
+	 * @param boolean $primary
+	 * @return mixed $results
+	 */
+	public function afterFind(Model $Model, $results, $primary = false) {
+		$settings = (!empty($this->settings[$Model->alias]) ? $this->settings[$Model->alias] : array());
 		if (!empty($settings['with'])) {
 			$with = $settings['with'];
 			if (!Set::matches('/' . $with, $results)) {
@@ -82,43 +115,193 @@ class ExpandableBehavior extends ModelBehavior {
 				foreach (array_keys($results[$i][$with]) as $j) {
 					$key = $results[$i][$with][$j]['key'];
 					$value = $results[$i][$with][$j]['value'];
-					$results[$i][$model->alias][$key] = $value;
+					$results[$i][$Model->alias][$key] = $this->decode($Model, $value);
 				}
 			}
 		}
 		return $results;
 	}
 
-	public function beforeSave(&$model) {
-		$settings = $this->settings[$model->alias];
-		$this->_fieldsToSave = array_diff_key($model->data[$model->alias], $settings['schema']);
+	/**
+	 * Standard beforeSave() callback
+	 * Sets up what data will be saved for expandable
+	 *
+	 * @param object Model $Model
+	 * @return boolean
+	 */
+	public function beforeSave(Model $Model, $options = array()) {
+		$settings = (!empty($this->settings[$Model->alias]) ? $this->settings[$Model->alias] : array());
+		if (isset($settings['schema'])) {
+			$this->_fieldsToSave = array_diff_key($Model->data[$Model->alias], $settings['schema']);
+		}
 		return true;
 	}
 
-	public function afterSave(&$model) {
-		$settings = $this->settings[$model->alias];
+	/**
+	 * Standard afterSave() callback
+	 * Actually save the expandable data (one record for each fieldsToSave)
+	 *
+	 * @param object Model $Model
+	 * @param boolean $created
+	 * @return boolean
+	 */
+	public function afterSave(Model $Model, $created, $options = array()) {
+		$settings = (!empty($this->settings[$Model->alias]) ? $this->settings[$Model->alias] : array());
 		if (!empty($settings['with']) && !empty($this->_fieldsToSave)) {
 			$with = $settings['with'];
-			$assoc = $model->hasMany[$with];
+			$assoc = $Model->hasMany[$with];
 			$foreignKey = $assoc['foreignKey'];
-			$id = $model->id;
+			$id = $Model->id;
+			// set of "keys" we will ignore
+			$restricted_keys = $settings['restricted_keys'];
+			// automatically ignore all associated models
+			$restricted_keys = array_merge($restricted_keys, array_keys($Model->belongsTo));
+			$restricted_keys = array_merge($restricted_keys, array_keys($Model->hasOne));
+			$restricted_keys = array_merge($restricted_keys, array_keys($Model->hasMany));
+			$restricted_keys = array_merge($restricted_keys, array_keys($Model->hasAndBelongsToMany));
 			foreach ($this->_fieldsToSave as $key => $val) {
-				$fieldId = $model->{$with}->field('id', array(
+				if (in_array($key, $restricted_keys, true)) {
+					continue;
+				}
+				$fieldId = $Model->{$with}->field('id', array(
 					$with . '.' . $foreignKey => $id,
 					$with . '.key' => $key
 				));
-				$data = array('value' => $val);
+				$data = array('value' => $this->encode($Model, $val, $key));
 				if (!empty($fieldId)) {
-					$model->{$with}->id = $fieldId;
+					$Model->{$with}->id = $fieldId;
 				} else {
-					$model->{$with}->create();
-					$data[$foreignKey] = $id;
-					$data['key'] = $key;
+					$Model->{$with}->create();
 				}
-				$saved = $model->{$with}->save($data);
+				$data[$foreignKey] = $id;
+				$data['key'] = $key;
+				$saved = $Model->{$with}->save($data);
 			}
 			return true;
 		}
+	}
+
+	/**
+	 * Optionally encode various inputs into a normalized storage string
+	 *   see $defaults to see what settings are possible
+	 *
+	 * @param mixed $value
+	 * @return string $value
+	 */
+	private function encode(Model $Model, $value, $key) {
+		$settings = (!empty($this->settings[$Model->alias]) ? $this->settings[$Model->alias] : array());
+		if (!empty($settings['encode_date'])) {
+			$value = $this->encode_date($Model, $value, $key);
+		}
+		if (!empty($settings['encode_csv'])) {
+			$value = $this->encode_csv($Model, $value, $key);
+		}
+		if (!empty($settings['encode_json'])) {
+			$value = $this->encode_json($Model, $value, $key);
+		}
+		return $value;
+	}
+
+	/**
+	 * Encode dates which may be passed in as an array
+	 *
+	 * @param Model $Model
+	 * @param mixed $value
+	 * @param string $key
+	 * @return string $value
+	 */
+	private function encode_date(Model $Model, $value, $key) {
+		if (!is_array($value)) {
+			return $value;
+		}
+		$settings = (!empty($this->settings[$Model->alias]) ? $this->settings[$Model->alias] : array());
+		if (empty($settings['encode_date'][$key])) {
+			return $value;
+		}
+		$format = $settings['encode_date'][$key];
+		if (!is_string($format)) {
+			$format = 'Y-m-d';
+		}
+		// parses inputs generated by CakePHP date helpers
+		$dateField = Set::filter(array_merge(array('year' => date('Y'), 'month' => date('m'), 'day' => date('d')), $value));
+		$datestring = $dateField['year'] . '-' .$dateField['month'] . '-' . $dateField['day'];
+		$dateObject = DateTime::createFromFormat('Y-m-d', $datestring);
+		return $dateObject->format($format);
+	}
+
+	/**
+	 * Encode fields which may be passed in as an array, as a CSV string
+	 * (for use with FIND_IN_SET() searching in MySQL)
+	 *
+	 * @param Model $Model
+	 * @param mixed $value
+	 * @param string $key
+	 * @return string $value
+	 */
+	private function encode_csv(Model $Model, $value, $key) {
+		if (!is_array($value)) {
+			return $value;
+		}
+		$settings = (!empty($this->settings[$Model->alias]) ? $this->settings[$Model->alias] : array());
+		if (empty($settings['encode_csv'][$key]) && !in_array($key, $settings['encode_csv'], true)) {
+			return $value;
+		}
+		array_walk($value, create_function('&$val', '$val = trim(strval($val));'));
+		return implode(',', $value);
+	}
+
+	/**
+	 * Optionally encode non-string/numeric inputs into JSON strings
+	 *
+	 * @param Model $Model
+	 * @param mixed $value
+	 * @param string $key
+	 * @return string $value
+	 */
+	private function encode_json(Model $Model, $value, $key) {
+		if ($value === true) {
+			return 'true';
+		}
+		if ($value === false) {
+			return 'false';
+		}
+		if ($value === null) {
+			return 'null';
+		}
+		if (is_string($value) || is_numeric($value)) {
+			return $value;
+		}
+		return json_encode($value);
+	}
+
+	/**
+	 * Optionally decode JSON strings into true/expanded values
+	 *
+	 * @param string $value
+	 * @return mixed $value
+	 */
+	private function decode(Model $Model, $value) {
+		if (empty($value)) {
+			return $value;
+		}
+		$settings = (!empty($this->settings[$Model->alias]) ? $this->settings[$Model->alias] : array());
+		if (!$settings['encode_json']) {
+			return $value;
+		}
+		if ($value == 'true') {
+			return true;
+		}
+		if ($value == 'false') {
+			return false;
+		}
+		if ($value == 'null') {
+			return null;
+		}
+		$decoded = @json_decode($value, true);
+		if ($decoded != null) {
+			return $decoded;
+		}
+		return $value;
 	}
 
 }
