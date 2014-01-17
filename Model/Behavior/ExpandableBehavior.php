@@ -172,9 +172,9 @@ class ExpandableBehavior extends ModelBehavior {
 					$Model->{$with}->id = $fieldId;
 				} else {
 					$Model->{$with}->create();
-					$data[$foreignKey] = $id;
-					$data['key'] = $key;
 				}
+				$data[$foreignKey] = $id;
+				$data['key'] = $key;
 				$saved = $Model->{$with}->save($data);
 			}
 			return true;
