@@ -5,6 +5,13 @@ in two tables without touching schema.
 
 It works like Cake's i18n table
 
+Instalation:
+-------------------------------
+git clone into your plugin folder or use composer
+
+1. Download [Composer](http://getcomposer.org/doc/00-intro.md) or update `composer self-update`.
+2. Run `php composer.phar create-project LubosRemplik/cakephp-expandable`.
+
 What it Does:
 -------------------------------
 The ExpandableBehavior will allow you to extend any model with any set of "extra fields" which don't exist in it's schema.
