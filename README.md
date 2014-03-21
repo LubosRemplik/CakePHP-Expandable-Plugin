@@ -11,7 +11,7 @@ Via git clone into your plugin folder or use [composer](https://getcomposer.org/
 For existing applications you can add the following to your `composer.json` file:
 
 	"require": {
-		"lubos/cakephp-expandable": "~1.0"
+		"lubos/expandable": "~1.0"
 	}
 
 And run `php composer.phar update`
