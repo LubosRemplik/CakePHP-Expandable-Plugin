@@ -7,10 +7,14 @@ It works like Cake's i18n table
 
 Instalation:
 -------------------------------
-git clone into your plugin folder or use composer
+Via git clone into your plugin folder or use [composer](https://getcomposer.org/doc/00-intro.md). 
+For existing applications you can add the following to your `composer.json` file:
 
-1. Download [Composer](http://getcomposer.org/doc/00-intro.md) or update `composer self-update`.
-2. Run `php composer.phar create-project LubosRemplik/cakephp-expandable`.
+	"require": {
+		"lubos/cakephp-expandable": "~1.0"
+	}
+
+And run `php composer.phar update`
 
 What it Does:
 -------------------------------
