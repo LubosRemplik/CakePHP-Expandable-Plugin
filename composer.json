@@ -1,5 +1,5 @@
 {
-	"name": "LubosRemplik/cakephp-expandable",
+	"name": "lubos/cakephp-expandable",
 	"description": "CakePHP Expandable plugin",
 	"type": "cakephp-plugin",
 	"require": {
