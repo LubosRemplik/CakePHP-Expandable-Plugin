@@ -1,5 +1,5 @@
 {
-	"name": "lubos/expandable",
+	"name": "onidle/expandable",
 	"description": "CakePHP Expandable plugin",
 	"type": "cakephp-plugin",
 	"require": {
