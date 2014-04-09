@@ -2,6 +2,12 @@
 	"name": "onidle/expandable",
 	"description": "CakePHP Expandable plugin",
 	"type": "cakephp-plugin",
+	"repositories": [
+		{
+			"type": "composer",
+			"url": "http://packages.on-idle.com"
+		}
+	],
 	"require": {
 		"cakephp/cakephp": "~2.0",
 		"composer/installers": "~1.0",
