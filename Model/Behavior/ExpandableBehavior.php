@@ -61,7 +61,7 @@ class ExpandableBehavior extends ModelBehavior {
 
 	public $defaults = array(
 		// if a value is an array or object we can encode/decode via: json
-		'encode_json' => true,
+		'encode_json' => false,
 		// Ignore all of these fields (never save them) security like whoa!
 		'restricted_keys' => array(),
 		// CSV strings are awesome -- they let us look FIND_IN_SET() in mysql
