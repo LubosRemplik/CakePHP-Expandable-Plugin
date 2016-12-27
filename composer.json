@@ -9,7 +9,6 @@
 		}
 	],
 	"require": {
-		"cakephp/cakephp": "~2.0",
 		"composer/installers": "~1.0",
 		"php": ">=5.2.8"
 	}
