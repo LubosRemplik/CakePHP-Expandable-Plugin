@@ -246,7 +246,9 @@ class ExpandableBehavior extends ModelBehavior {
 		if (empty($settings['encode_csv'][$key]) && !in_array($key, $settings['encode_csv'], true)) {
 			return $value;
 		}
-		array_walk($value, create_function('&$val', '$val = trim(strval($val));'));
+		array_walk($value, function (&$val) {
+		    $val = trim(strval($val));
+		});
 		return implode(',', $value);
 	}
 
